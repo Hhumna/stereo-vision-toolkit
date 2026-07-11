@@ -589,8 +589,11 @@ btnSpin.addEventListener('click', () => {
   let videoEl = null;
   document.getElementById('fileVideo').addEventListener('change', e => {
     const f = e.target.files[0]; if(!f) return;
+    if (videoEl && videoEl.parentNode) videoEl.parentNode.removeChild(videoEl);
     videoEl = document.createElement('video');
-    videoEl.muted = true; videoEl.playsInline = true;
+    videoEl.muted = true; videoEl.playsInline = true; videoEl.preload = 'auto';
+    videoEl.style.cssText = 'position:absolute; width:2px; height:2px; opacity:0; pointer-events:none;';
+    document.body.appendChild(videoEl);
     videoEl.src = URL.createObjectURL(f);
     videoEl.addEventListener('loadedmetadata', () => {
       document.getElementById('dropVideo').classList.add('filled');
@@ -599,26 +602,42 @@ btnSpin.addEventListener('click', () => {
       log('Video loaded (' + videoEl.duration.toFixed(1) + 's) — pick frame positions');
       extractVideoFrames();
     });
+    videoEl.addEventListener('error', () => {
+      log('Could not read this video file — try a different format (MP4/WebM work best).', 'warn');
+    });
   });
+  let extracting = false;
   function extractVideoFrames(){
-    if (!videoEl) return;
+    if (!videoEl || extracting) return;
+    extracting = true;
     const pA = document.getElementById('rangeA').value/100;
     const pB = document.getElementById('rangeB').value/100;
     document.getElementById('rangeAVal').textContent = Math.round(pA*100)+'%';
     document.getElementById('rangeBVal').textContent = Math.round(pB*100)+'%';
-    grabFrame(pA, c => { frameACanvas = c; checkVideoReady(); });
-    grabFrame(pB, c => { frameBCanvas = c; checkVideoReady(); });
+    log('Extracting frame A…');
+    // grab frames SEQUENTIALLY — seeking twice in a row on one <video> races and drops one frame
+    grabFrame(pA, c => {
+      frameACanvas = c;
+      checkVideoReady();
+      log('Extracting frame B…');
+      grabFrame(pB, c2 => {
+        frameBCanvas = c2;
+        checkVideoReady();
+        extracting = false;
+        log('Both frames extracted from video.', 'ok');
+      });
+    });
   }
   function checkVideoReady(){ if(frameACanvas && frameBCanvas) updateRunHint(); }
   function grabFrame(pct, cb){
     const t = Math.max(0, Math.min(videoEl.duration - 0.05, videoEl.duration * pct));
     const onSeeked = () => {
+      videoEl.removeEventListener('seeked', onSeeked);
       const scale = Math.min(1, MAX_DIM / Math.max(videoEl.videoWidth, videoEl.videoHeight));
       const c = document.createElement('canvas');
       c.width = Math.round(videoEl.videoWidth*scale);
       c.height = Math.round(videoEl.videoHeight*scale);
       c.getContext('2d').drawImage(videoEl, 0, 0, c.width, c.height);
-      videoEl.removeEventListener('seeked', onSeeked);
       cb(c);
     };
     videoEl.addEventListener('seeked', onSeeked);
