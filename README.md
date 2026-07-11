@@ -2,6 +2,12 @@
 
 Browser-based stereo reconstruction, depth mapping, ML-style segmentation, AR line overlays, and interactive 3D point-cloud visualization — all running directly in the browser.
 
+## Live Demo
+
+View the deployed project here:
+
+- https://charming-gecko-357ef7.netlify.app/
+
 ## Overview
 
 Stereo Vision Toolkit is a lightweight, single-page web application that demonstrates a complete stereo-vision workflow from image input to 3D reconstruction. The project is designed for experimentation, visualization, and educational use, allowing users to upload:
